@@ -6,7 +6,7 @@ import express, { Request, Response, Express } from "express";
 interface Customer {
 	id: number;
 	name: string;
-	status: "GOLD" | "SILVER" | "BRONZE";
+	status: "GOLD" | "SILVER" | "BRONZE" | "PLATINUM";
 	points: number;
 	lastPurchaseDate: string;
 	email?: string;
@@ -31,7 +31,7 @@ const customers: Customer[] = [
 		id: 2,
 		name: "Jane Doe",
 		status: "GOLD",
-		points: 850,
+		points: 1850,
 		lastPurchaseDate: "2024-03-01",
 		email: "jane.doe@email.com",
 		joinDate: "2023-01-20",
@@ -69,29 +69,44 @@ app.get("/api/customers/:id", (req: Request, res: Response): void => {
 app.post("/api/customers/:id/purchase", (req: Request, res: Response): void => {
 	const customerId: number = parseInt(req.params.id);
 	const customer: Customer | undefined = customers.find(
-		(c) => c.id === customerId
+	  (c) => c.id === customerId
 	);
 	if (!customer) {
-		res.status(404).send("Customer not found");
-		return;
+	  res.status(404).send("Customer not found");
+	  return;
 	}
-
+  
 	const purchaseAmount: number = req.body.amount;
 	const storeLocation: string = req.body.storeLocation;
-
-	customer.points += Math.floor(purchaseAmount / 10);
-	customer.lastPurchaseDate = new Date().toISOString();
-
-	if (customer.points >= 750) {
-		customer.status = "GOLD";
-		customer.lastStatusChange = new Date().toISOString();
-	} else if (customer.points >= 500) {
-		customer.status = "SILVER";
-		customer.lastStatusChange = new Date().toISOString();
+  
+	// Points Calculation Logic
+	let additionalPoints = Math.floor(purchaseAmount / 10); // Base points calculation
+	
+	// Adjust points for GOLD customers to help them earn points faster
+	if (customer.status === "GOLD") {
+	  additionalPoints = Math.floor(purchaseAmount / 8);  // 25% faster points for GOLD customers
 	}
-
+  
+	customer.points += additionalPoints;
+	customer.lastPurchaseDate = new Date().toISOString();
+  
+	// Status transition logic
+	if (customer.points >= 1000) {
+	  customer.status = "PLATINUM";  // Promote to PLATINUM if points exceed 1000
+	} else if (customer.points >= 750) {
+	  customer.status = "GOLD";
+	} else if (customer.points >= 500) {
+	  customer.status = "SILVER";
+	} else {
+	  customer.status = "BRONZE";
+	}
+  
+	// Record the last status change timestamp
+	customer.lastStatusChange = new Date().toISOString();
+  
 	res.json(customer);
-});
+  });
+  
 
 /**
  * Update customer preferences, such as notifications, preferred store, and email.
